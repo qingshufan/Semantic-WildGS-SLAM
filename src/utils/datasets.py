@@ -435,5 +435,6 @@ dataset_dict = {
     "tumrgbd": TUM_RGBD,
     "bonn_dynamic": TUM_RGBD,
     "wild_slam_mocap": TUM_RGBD,
-    "wild_slam_iphone": RGB_NoPose
+    "wild_slam_iphone": RGB_NoPose,
+    "genea": RGB_NoPose
 }

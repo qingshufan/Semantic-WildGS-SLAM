@@ -31,6 +31,7 @@ class MotionFilter:
         
         self.uncertainty_aware = cfg['tracking']["uncertainty_params"]['activate']
         self.save_dir = cfg['data']['output'] + '/' + cfg['scene']
+        
         self.metric_depth_estimator = get_metric_depth_estimator(cfg)
         if cfg['mapping']["uncertainty_params"]['activate']:
             # If mapping needs dino features, we still need feature extractor

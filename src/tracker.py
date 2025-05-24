@@ -8,6 +8,8 @@ from src.utils.datasets import BaseDataset
 from src.utils.Printer import Printer,FontColor
 class Tracker:
     def __init__(self, slam, pipe:Connection):
+
+        
         self.cfg = slam.cfg
         self.device = self.cfg['device']
         self.net = slam.droid_net

@@ -1,0 +1,17 @@
+inherit_from: ./configs/wildgs_slam.yaml
+
+dataset: 'genea'
+
+data:
+  root_folder: ./datasets/genea
+  output: ./output/genea
+
+cam:  #intrinsic is different per scene in TUM, this cam does not have distortion
+  H: 480 
+  W: 640 
+  fx: 507.292109502834
+  fy: 526.636687152693
+  cx: 311.8322920110805
+  cy: 226.2697397957387
+  H_out: 240
+  W_out: 400

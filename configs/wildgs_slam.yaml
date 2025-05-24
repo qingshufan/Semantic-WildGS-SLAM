@@ -3,7 +3,7 @@ gui: False
 stride: 1            # use every X image from the dataset 
 max_frames: -1       # use the first X images from the dataset, -1 means using all
 setup_seed: 43
-fast_mode: False
+fast_mode: True
 device: "cuda:0"
 
 mapping:
@@ -143,7 +143,7 @@ mono_prior:
   #     metric3d_vit_small, metric3d_vit_large and metric3d_vit_giant2
   #     dpt2_{vits,vitb,vitl}_{hypersim,vkitti}_{20,80}  (see src/utils/mono_priors/metric_depth_estimators.py for detail)
   #             e.g. dpt2_vitl_hypersim_20, dpt2_vitl_vkitti_80
-  depth: 'metric3d_vit_large'
+  depth: 'metric3d_vit_small'
 
   # Available options: {dinov2_reg_small_fine, dinov2_small_fine} from fit3d, and {dinov2_vits14, dinov2_vits14_reg}
   feature_extractor: 'dinov2_reg_small_fine' 
