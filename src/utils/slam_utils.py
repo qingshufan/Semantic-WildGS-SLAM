@@ -180,13 +180,13 @@ def get_loss_mapping_uncertainty(
     rendered_img = rendered_img if initialization else (
         torch.exp(viewpoint.exposure_a) * rendered_img + viewpoint.exposure_b
     )
-
     # Get config parameters
     alpha = config["Training"].get("alpha", 0.95)
     rgb_boundary_threshold = config["Training"]["rgb_boundary_threshold"]
     
     # Get reference data
     gt_img = viewpoint.original_image.cuda()
+    
     ref_depth = torch.from_numpy(viewpoint.depth).to(
         dtype=torch.float32, device=rendered_img.device
     )[None]
@@ -202,8 +202,8 @@ def get_loss_mapping_uncertainty(
     # Predict uncertainty from features
     features = viewpoint.features.to(device=rendered_img.device)
     uncertainty = uncertainty_network(features)
-
-     # Compute mapping losses with uncertainty
+    uncertainty.fill_(1.0) 
+    # Compute mapping losses with uncertainty
     uncer_loss, uncer_resized, l1_rgb, l1_depth = map_utils.compute_mapping_loss_components(
         gt_img,
         rendered_img,
