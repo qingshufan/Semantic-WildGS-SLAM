@@ -202,7 +202,17 @@ def get_loss_mapping_uncertainty(
     # Predict uncertainty from features
     features = viewpoint.features.to(device=rendered_img.device)
     uncertainty = uncertainty_network(features)
-    uncertainty.fill_(1.0) 
+
+    # **** qingshufan modified code start ****
+    # uncertainty.fill_(1.0)
+    uncertainty_mean = uncertainty.mean()
+    uncertainty_threshold = config["uncertainty_params"].get("uncertainty_threshold", 0.5)
+    high_uncertainty_loss = 0
+    if uncertainty_mean < uncertainty_threshold:
+        high_uncertainty_loss = (uncertainty_mean - uncertainty_threshold) ** 2
+        uncertainty = torch.ones_like(uncertainty)
+    # **** qingshufan modified code end ****
+
     # Compute mapping losses with uncertainty
     uncer_loss, uncer_resized, l1_rgb, l1_depth = map_utils.compute_mapping_loss_components(
         gt_img,
@@ -216,7 +226,12 @@ def get_loss_mapping_uncertainty(
         uncertainty_config=config["uncertainty_params"],
         mask=rgb_pixel_mask
     )
-
+    
+    # **** qingshufan modified code start ****
+    if uncer_resized.mean() < uncertainty_threshold:
+        uncer_resized = torch.ones_like(uncer_resized)
+    # **** qingshufan modified code end ****
+    
     # Combine RGB losses
     if config["Training"]["ssim_loss"]:
         lambda_dssim = config["opt_params"]["lambda_dssim"]
@@ -252,8 +267,13 @@ def get_loss_mapping_uncertainty(
     total_loss = (
         alpha * rgb_loss.mean() +
         (1 - alpha) * l1_depth.mean() +
-        config["uncertainty_params"]["ssim_mult"] * uncer_loss.mean()
+        config["uncertainty_params"]["ssim_mult"] * uncer_loss.mean() +
+    #**** qingshufan modified code start ****
+        high_uncertainty_loss
+    #**** qingshufan modified code end ****
     )
+    
+
 
     return uncertainty, total_loss
 
