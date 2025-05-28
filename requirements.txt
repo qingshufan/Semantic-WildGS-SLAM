@@ -26,3 +26,9 @@ PyQt5
 glfw
 PyGLM
 mmengine
+ros-noetic-ros-base
+ros-noetic-rospy
+ros-noetic-roscpp
+ros-noetic-message-filters
+ros-noetic-image-transport
+ros-noetic-cv-bridge

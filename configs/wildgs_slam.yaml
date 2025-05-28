@@ -103,7 +103,7 @@ tracking:
     nms: 1                 # r_local in GO-SLAM paper
     max_factors: 75        # maximum number of edges in local ba
   backend:
-    final_ba: True # whether to enable final global bundle adjustment in the end
+    final_ba: False # whether to enable final global bundle adjustment in the end
     ba_freq: 20    # do online bundle adjustment every X keyframes
     thresh: 25.0   # only consider edge with avg flow < X pixels
     radius: 1      # build edges within local window [i-radius, i]
