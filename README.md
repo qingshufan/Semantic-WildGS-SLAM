@@ -1,6 +1,7 @@
 <p align="center">
 
   <h1 align="center">WildGS-SLAM: Monocular Gaussian Splatting SLAM in Dynamic Environments</h1>
+  <h2 align="center">(Semantic-WildGS-SLAM-ROS)</h2>
   <p align="center">
     <a href="https://jianhao-zheng.github.io/"><strong>Jianhao Zheng*</strong></a>
     .
@@ -37,6 +38,9 @@ WildGS-SLAM accurately tracks the camera trajectory and reconstructs a 3D Gaussi
   <ol>
     <li>
       <a href="#installation">Installation</a>
+    </li>
+    <li>
+      <a href="#installation">ROS 1 Installation</a>
     </li>
     <li>
       <a href="#quick-demo">Quick Demo</a>
@@ -102,14 +106,51 @@ pip install mmcv-full -f https://download.openmmlab.com/mmcv/dist/cu118/torch2.1
 ```
 9. Download the pretained models [droid.pth](https://drive.google.com/file/d/1PpqVt1H4maBa_GbPJp4NwxRsd9jk-elh/view?usp=sharing), put it inside the `pretrained` folder.
 
-## Quick Demo
+## **ROS 1 Installation (Ubuntu 22.04, Noetic)**  
+For ROS 1 integration, install the following:  
+
+### 1. Set Up ROS 1 Noetic Repositories  
+```bash  
+sudo sh -c 'echo "deb http://packages.ros.org/ros/ubuntu $(lsb_release -sc) main" > /etc/apt/sources.list.d/ros-latest.list'  
+sudo apt-key adv --keyserver hkp://keyserver.ubuntu.com:80 --recv-keys C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654  
+```  
+
+### 2. Update Packages  
+```bash  
+sudo apt update  
+```  
+
+### 3. Install ROS 1 Noetic Desktop Full  
+```bash  
+sudo apt install ros-noetic-desktop-full  
+```  
+
+### 4. Initialize rosdep  
+```bash  
+sudo rosdep init  
+rosdep update  
+```  
+
+### 5. Source ROS Environment  
+Add to `~/.bashrc` for permanent setup:  
+```bash  
+source /opt/ros/noetic/setup.bash  
+```  
+
+### 6. Install ROS Dependencies for Semantic-WildGS-SLAM  
+```bash  
+sudo apt install ros-noetic-cv-bridge ros-noetic-image-transport ros-noetic-tf2-geometry-msgs  
+```  
+
+
+## Quick Demo For ROS
 First download and zip the crowd sequence of Wild-SLAM dataset
 ```bash
 bash scripts_downloading/download_demo_data.sh
 ```
 Then, run WildGS-SLAM by the following command:
 ```
-python run.py  ./configs/Dynamic/Wild_SLAM_Mocap/crowd_demo.yaml
+python run.py  ./configs/Dynamic/Wild_SLAM_Mocap/crowd_demo.yaml --ros
 ```
 
 If you encounter a CUDA out-of-memory error, a quick fix is to lower the image resolution. For example, add the following lines to your ```configs/Dynamic/Wild_SLAM_Mocap/crowd_demo.yaml``` file:
