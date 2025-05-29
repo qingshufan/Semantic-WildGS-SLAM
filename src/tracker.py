@@ -46,7 +46,15 @@ class Tracker:
 
         intrinsic = stream.get_intrinsic()
         # for (timestamp, image, _, _) in tqdm(stream):
-        for i in range(len(stream)):
+        
+        # **** qingshufan modified code start ****
+
+        i = 0
+        while i < len(stream):
+            self.printer.update_total(len(stream))
+            
+        # **** qingshufan modified code end ****
+
             timestamp, image, _, _ = stream[i]
             with torch.no_grad():
                 starting_count = self.video.counter.value
@@ -84,6 +92,10 @@ class Tracker:
 
             prev_kf_idx = curr_kf_idx
             self.printer.update_pbar()
+            
+            # **** qingshufan modified code start ****
+            i += 1
+             # **** qingshufan modified code start ****
 
         self.pipe.send({"is_keyframe":True, "video_idx":None,
                         "timestamp":None, "just_initialized": False, 

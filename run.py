@@ -17,6 +17,9 @@ from sensor_msgs.msg import Image
 from cv_bridge import CvBridge
 import cv2
 import re
+import multiprocessing
+import shutil
+
 # **** qingshufan modified code end ****
 
 def setup_seed(seed):
@@ -74,14 +77,33 @@ class ImageSaver:
             return True
             
         return False
+    
+def run_ros_node(cfg, args):
+    try:
+        rospy.init_node('semantic_wildgs_slam', anonymous=True)
+        
+        save_folder = os.path.join(
+            cfg['data']['input_folder'].replace("ROOT_FOLDER_PLACEHOLDER", cfg['data']['root_folder']), 
+            'rgb'
+        )
+        
+        saver = ImageSaver(save_folder)
+        rospy.Timer(rospy.Duration(1), lambda event: saver.check_timeout())
+        
+        rospy.spin()
+        
+    except Exception as e:
+        print(f"ROS node abnormal exit: {str(e)}")
 
  # **** qingshufan modified code end ****
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('config', type=str, help='Path to config file.')   
+
     # **** qingshufan modified code start ****
     parser.add_argument('--ros', action='store_true', help='Enable ROS mode')
     # **** qingshufan modified code end ****
+    
     args = parser.parse_args()
 
     torch.multiprocessing.set_start_method('spawn')
@@ -90,20 +112,17 @@ if __name__ == '__main__':
 
     # **** qingshufan modified code start ****
     #ROS
+    processes = []
     if args.ros:
-        try:
-            rospy.init_node('semantic_wildgs_slam', anonymous=True)
-            save_folder = os.path.join(
-                cfg['data']['input_folder'].replace("ROOT_FOLDER_PLACEHOLDER", cfg['data']['root_folder']), 
-                'rgb'
-            )
-            saver = ImageSaver(save_folder)
-            rospy.Timer(rospy.Duration(1), lambda event: saver.check_timeout())
-            rospy.spin()
-        except Exception as e:
-            print(f"ROS node failed: {str(e)}")
+        ros_process = multiprocessing.Process(
+            target=run_ros_node,
+            args=(cfg, args)
+        )
+        ros_process.start()
+        processes.append(ros_process)
     else:
-        print("ROS mode disabled. Running in standalone mode.")
+        print("ROS mode disabled, running in standalone mode")
+
     # **** qingshufan modified code end ****
     
     setup_seed(cfg['setup_seed'])
@@ -132,6 +151,22 @@ if __name__ == '__main__':
     slam = SLAM(cfg,dataset)
     slam.run()
 
+    # **** qingshufan modified code start ****
+    
+    for p in processes:
+        p.join()
+
+    if args.ros:
+        folder_path = os.path.join(
+            cfg['data']['input_folder'].replace("ROOT_FOLDER_PLACEHOLDER", cfg['data']['root_folder']), 
+            'rgb'
+        )
+        if os.path.exists(folder_path) and os.path.isdir(folder_path):
+            shutil.rmtree(folder_path)
+
+    # **** qingshufan modified code end ****
+
     end_time = strftime("%Y-%m-%d %H:%M:%S", gmtime())
     print("-"*30+Fore.LIGHTRED_EX+f"\nWildGS-SLAM finishes!\n"+Style.RESET_ALL+f"{end_time}\n"+"-"*30)
+    
 

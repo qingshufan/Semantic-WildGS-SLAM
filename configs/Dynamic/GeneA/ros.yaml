@@ -1,5 +1,6 @@
 inherit_from: ./configs/Dynamic/GeneA/genea.yaml
-scene: ros
+scene: laptop2
+dataset: 'ros'
 mapping:
   Training:
     alpha: 0.8 # Increase this value to make rendering loss weighs more on rgb rather than depth

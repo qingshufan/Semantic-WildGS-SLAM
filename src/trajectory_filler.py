@@ -108,7 +108,14 @@ class PoseTrajectoryFiller:
 
         self.printer.print("Filling full trajectory ...",FontColor.INFO)
         intrinsic = image_stream.get_intrinsic()
-        for (timestamp, image, _ , _)  in tqdm(image_stream):
+
+        # **** qingshufan modified code start ****
+        
+        for i in tqdm(range(len(image_stream))):
+            timestamp, image, _, _  = image_stream[i]
+            
+        # **** qingshufan modified code start ****
+
             timestamps.append(timestamp)
             images.append(image)
             intrinsics.append(intrinsic)

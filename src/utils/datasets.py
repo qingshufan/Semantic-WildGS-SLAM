@@ -8,6 +8,7 @@ import torch
 import torch.nn.functional as F
 from torch.utils.data import Dataset
 from thirdparty.gaussian_splatting.utils.graphics_utils import focal2fov
+import time
 
 def readEXR_onlydepth(filename):
     """
@@ -429,6 +430,61 @@ class RGB_NoPose(BaseDataset):
         self.color_paths = self.color_paths[:max_frames][::stride]
         self.n_img = len(self.color_paths)
 
+# **** qingshufan modified code start ****
+
+class ROS_RGB_NoPose(RGB_NoPose):
+    def __init__(self, cfg, device='cuda:0'
+                 ):
+        super(ROS_RGB_NoPose, self).__init__(cfg, device)
+
+        self.stride = cfg['stride']
+        self.max_frames = cfg['max_frames']
+
+    def __len__(self):
+        self.color_paths = sorted(
+            glob.glob(f'{self.input_folder}/rgb/frame*.png'))
+        max_frames = -1
+        if self.max_frames == -1:
+            max_frames = len(self.color_paths)
+        self.color_paths = self.color_paths[:max_frames][::self.stride]
+        self.n_img = len(self.color_paths)
+        if self.n_img <= 0:
+            print("Waiting for Image Data")
+            time.sleep(1) 
+            return self.__len__()
+        
+        return self.n_img
+    
+    def get_color(self,index):
+        self.color_paths = sorted(
+            glob.glob(f'{self.input_folder}/rgb/frame*.png'))
+        max_frames = -1
+        if self.max_frames == -1:
+            max_frames = len(self.color_paths)
+        self.color_paths = self.color_paths[:max_frames][::self.stride]
+        self.n_img = len(self.color_paths)
+
+        if index < 0 or index >= len(self.color_paths):
+            print("Waiting for Image Data")
+            time.sleep(1) 
+            return self.get_color(index)
+        return super().get_color(index)
+    
+    def get_color_full_resol(self,index):
+        self.color_paths = sorted(
+            glob.glob(f'{self.input_folder}/rgb/frame*.png'))
+        max_frames = -1
+        if self.max_frames == -1:
+            max_frames = len(self.color_paths)
+        self.color_paths = self.color_paths[:max_frames][::self.stride]
+        self.n_img = len(self.color_paths)
+        
+        if index < 0 or index >= len(self.color_paths):
+            print("Waiting for Image Data")
+            time.sleep(1) 
+            return self.get_color_full_resol(index)
+        return super().get_color_full_resol(index)
+
 dataset_dict = {
     "replica": Replica,
     "scannet": ScanNet,
@@ -436,5 +492,8 @@ dataset_dict = {
     "bonn_dynamic": TUM_RGBD,
     "wild_slam_mocap": TUM_RGBD,
     "wild_slam_iphone": RGB_NoPose,
-    "genea": RGB_NoPose
+    "genea": RGB_NoPose,
+    "ros": ROS_RGB_NoPose
 }
+
+# **** qingshufan modified code end ****
