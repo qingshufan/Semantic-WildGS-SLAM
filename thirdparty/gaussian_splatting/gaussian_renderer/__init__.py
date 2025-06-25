@@ -112,7 +112,7 @@ def render(
     else:
         colors_precomp = override_color
 
-    # Rasterize visible Gaussians to image, obtain their radii (on screen).
+    # 将可见的高斯图像光栅化，获得它们的半径（在屏幕上）。
     if mask is not None:
         rendered_image, radii, depth, opacity = rasterizer(
             means3D=means3D[mask],

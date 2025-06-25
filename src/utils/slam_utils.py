@@ -155,26 +155,25 @@ def get_loss_mapping_uncertainty(
     initialization: bool = False,
     freeze_uncertainty_loss: bool = False,  # Renamed parameter
 ) -> Tuple[Tensor, Tensor]:
-    """Compute mapping loss with uncertainty estimation for SLAM system.
-    
-    Estimates per-pixel uncertainty and combines RGB + depth losses with uncertainty 
-    weighting to handle dynamic objects.
+    """为SLAM系统计算带不确定性估计的Mapping损失。
 
-    Args:
-        config: Configuration parameters
-        rendered_img: Rendered RGB image (3, H, W)
-        rendered_depth: Rendered depth map (1, H, W)
-        viewpoint: Camera containing ground truth image and reference depth
-        opacity: Rendering opacity mask (1, H, W)
-        uncertainty_network: MLP for uncertainty prediction
-        train_frac: Training progress (0-1) for adaptive weighting
-        ssim_frac: SSIM loss weight fraction
-        initialization: If True, skip exposure compensation
-        freeze_uncertainty_loss: If True, stops gradient flow through uncertainty loss
+    该函数估计每个像素的不确定性，并将RGB损失和深度损失与不确定性权重相结合，以处理动态物体。
 
-    Returns:
-        uncertainty: Per-pixel uncertainty estimates (H, W)
-        total_loss: Combined mapping and uncertainty loss (scalar)
+    参数:
+        config: 配置参数
+        rendered_img: 渲染的RGB图像(3, H, W) 高斯训练的初步渲染帧
+        rendered_depth: 渲染的深度图(1, H, W)
+        viewpoint: 包含真实图像和参考深度的相机
+        opacity: 渲染的不透明度掩码(1, H, W)
+        uncertainty_network: 用于不确定性预测的MLP(多层感知机)
+        train_frac: 用于自适应加权的训练进度(0-1)
+        ssim_frac: SSIM损失的权重比例
+        initialization: 若为True则跳过曝光补偿
+        freeze_uncertainty_loss: 若为True则停止不确定性损失的梯度流动
+
+    返回:
+        uncertainty: 每个像素的不确定性估计(H, W)
+        total_loss: 组合的映射损失和不确定性损失(标量)
     """
     # Apply exposure compensation if not initialization
     rendered_img = rendered_img if initialization else (
@@ -191,7 +190,7 @@ def get_loss_mapping_uncertainty(
         dtype=torch.float32, device=rendered_img.device
     )[None]
 
-    # Create valid pixel mask
+    # 过滤掉真值图像（gt_img）中不符合特定条件的像素
     _, h, w = gt_img.shape
     mask_shape = (1, h, w)
     rgb_pixel_mask = (gt_img.sum(dim=0) > rgb_boundary_threshold).view(*mask_shape)
@@ -210,10 +209,9 @@ def get_loss_mapping_uncertainty(
     high_uncertainty_loss = 0
     if uncertainty_mean < uncertainty_threshold:
         high_uncertainty_loss = (uncertainty_mean - uncertainty_threshold) ** 2
-        uncertainty = torch.ones_like(uncertainty)
     # **** qingshufan modified code end ****
 
-    # Compute mapping losses with uncertainty
+    # Compute mapping losses with uncertainty 计算论文公式的L_uncer、L1下的RGB、Depth、改进SSIM（用到L_uncer里了）
     uncer_loss, uncer_resized, l1_rgb, l1_depth = map_utils.compute_mapping_loss_components(
         gt_img,
         rendered_img,
@@ -232,7 +230,7 @@ def get_loss_mapping_uncertainty(
         uncer_resized = torch.ones_like(uncer_resized)
     # **** qingshufan modified code end ****
     
-    # Combine RGB losses
+    # Combine RGB losses 即论文中的L_color
     if config["Training"]["ssim_loss"]:
         lambda_dssim = config["opt_params"]["lambda_dssim"]
         rgb_loss = (1.0 - lambda_dssim) * l1_rgb + lambda_dssim * ssim_loss
@@ -241,7 +239,8 @@ def get_loss_mapping_uncertainty(
 
     # Apply uncertainty weighting
     weights = 0.5 / (uncer_resized.unsqueeze(0))**2
-    # Zero out weights below 0.1 to ignore highly uncertain regions (Todo: verify this is useful)
+
+    # 将权重低于0.1的区域归零以忽略高度不确定的区域（待办：验证此操作是否有效）
     weights = torch.where(weights < 0.1, 0.0, weights)
     
     rgb_loss = weights * rgb_loss
@@ -254,16 +253,16 @@ def get_loss_mapping_uncertainty(
             mode='bilinear'
         ).squeeze(0)
 
-    # only add uncertainty on pixels where gt_depth < rendered_depth (add 1.0m buffer)
-    # if you see a moving distractor, it must be closer to the camera than the static region
-    # adding this can effectively remove some floater
+    # 仅在真实深度(gt_depth)小于渲染深度(rendered_depth)的像素上添加不确定性（添加1.0米的缓冲区）
+    # 如果你看到一个移动的干扰物，它必须比静态区域更靠近相机
+    # 添加此操作可以有效去除一些悬浮噪点
     uncer_depth_mask = ref_depth < rendered_depth.detach() + 1.0
     l1_depth[uncer_depth_mask] = weights[uncer_depth_mask] * l1_depth[uncer_depth_mask]
 
     if freeze_uncertainty_loss:
         uncer_loss = uncer_loss.detach()
 
-    # Combine all losses
+    # Combine all losses 即论文中的L_render
     total_loss = (
         alpha * rgb_loss.mean() +
         (1 - alpha) * l1_depth.mean() +

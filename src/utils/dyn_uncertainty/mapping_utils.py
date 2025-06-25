@@ -217,28 +217,28 @@ def compute_mapping_loss_components(
     mask: Optional[torch.Tensor] = None,
 ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor, torch.Tensor]:
     """
-    Compute essential components for uncertainty-aware mapping loss.
+    计算不确定性感知映射损失的基本组件。
 
-    This function computes four key components used in the final mapping loss:
-    1. Uncertainty loss: Based on SSIM and depth differences, weighted by predicted uncertainty
-    2. Resized uncertainty: Uncertainty values resampled to match image dimensions
-    3. RGB L1 loss: Masked absolute differences between rendered and ground truth RGB values
-    4. Depth L1 loss: Masked absolute differences between rendered and reference depth values
+    此函数计算最终映射损失中使用的四个关键组件：
+    1. 不确定性损失：基于SSIM和深度差异，由预测的不确定性加权
+    2. 调整大小的不确定性：重新采样的不确定性值以匹配图像维度
+    3. RGB L1损失：渲染RGB与真实RGB值之间的掩码绝对差
+    4. 深度L1损失：渲染深度与参考深度值之间的掩码绝对差
 
-    Note: The SSIM loss here is not the same as the common one. Key differences include:
-            1. We clip contrast and structure components to a maximum value
-            2. the equation is modified to (1-c)(1-s)(1-l) according to nerf-on-the-go
-    Args:
-        gt_img: Ground truth RGB image [C,H,W]
-        rendered_img: Rendered RGB image [C,H,W]
-        ref_depth: Reference depth map [1,H,W] (from metric depth)
-        rendered_depth: Rendered depth map [1,H,W]
-        uncertainty: Model's uncertainty estimates [H',W'] (downsampled due to dino)
-        opacity: Rendering opacity mask [1,H,W]
-        train_fraction: Training progress (0-1) for adaptive weighting
-        ssim_fraction: SSIM loss weight fraction
-        uncertainty_config: Dictionary containing uncertainty estimation parameters
-        mask: Optional visibility mask for loss computation [1,H,W]
+    注意：此处的SSIM损失与常见的不同。关键区别包括：
+            1. 我们将对比度和结构组件裁剪到最大值
+            2. 根据nerf-on-the-go，方程修改为(1-c)(1-s)(1-l)
+    参数：
+        gt_img：真实RGB图像 [C,H,W]
+        rendered_img：渲染RGB图像 [C,H,W]
+        ref_depth：参考深度图 [1,H,W]（来自度量深度）
+        rendered_depth：渲染深度图 [1,H,W]
+        uncertainty：模型的不确定性估计 [H',W']（由于dino而下采样）
+        opacity：渲染不透明度掩码 [1,H,W]
+        train_fraction：自适应加权的训练进度(0-1)
+        ssim_fraction：SSIM损失权重占比
+        uncertainty_config：包含不确定性估计参数的字典
+        mask：损失计算的可选可见性掩码 [1,H,W]
     """
     # Initialize median pooling for SSIM
     median_filter = MedianPool2d(
@@ -249,15 +249,17 @@ def compute_mapping_loss_components(
     )
     _, h, w = gt_img.shape
 
-    # Compute RGB L1 loss with masking
+    # Compute RGB L1 loss with masking RGB绝对误差损失
     rgb_l1_loss = torch.abs(rendered_img * mask - gt_img * mask)
 
-    # Compute depth loss with adaptive thresholding
+    # Compute depth loss with adaptive thresholding RGB绝对误差损失
     median_depth = ref_depth.median()
     depth_threshold = min(10 * median_depth, 50)
     depth_mask = ((ref_depth > 0.01) & (ref_depth < depth_threshold)).view(
         *rendered_depth.shape
     )
+
+    # Depth 绝对误差损失
     depth_l1_loss = (
         torch.abs(rendered_depth * depth_mask - ref_depth * depth_mask)
     )
@@ -267,7 +269,7 @@ def compute_mapping_loss_components(
     resized_uncertainty = resample_tensor_to_shape(
         processed_uncertainty.detach(), (h, w)
     )
-    # 0.8 is ssim_anneal, this number is directly taken from nerf-on-the-go
+    # 0.8为ssim_anneal值，该数值直接取自nerf-on-the-go
     data_rate = 1 + 1 * compute_bias_factor(train_fraction, 0.8)
     resized_uncertainty = (resized_uncertainty - 0.1) * data_rate + 0.1
 
@@ -276,7 +278,7 @@ def compute_mapping_loss_components(
     small_opacity = resample_tensor_to_shape(resized_opacity, uncertainty.shape)
 
     # Compute SSIM-based loss
-    # 0.8 is ssim_anneal, this number is directly taken from nerf-on-the-go
+    # 0.8为ssim_anneal值，该数值直接取自nerf-on-the-go
     ssim_weight = 100 + 900 * compute_bias_factor(ssim_fraction, 0.8)
     luminance, contrast, structure = compute_ssim_components(
         gt_img, rendered_img, window_size=uncertainty_config["ssim_window_size"]
@@ -308,7 +310,7 @@ def compute_mapping_loss_components(
     # do not penalize far away pixels
     small_depth_loss[small_depth > depth_threshold] = 0.0
 
-    # Compute final uncertainty loss
+    # Compute final uncertainty loss 对应论文公式L_uncer
     uncertainty_loss = (
         filtered_ssim_loss / processed_uncertainty ** 2
         + 0.5 * torch.log(processed_uncertainty)

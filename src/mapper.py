@@ -934,6 +934,7 @@ class Mapper(object):
             viewpoint = viewpoint_stack[cam_idx]
             kf_idx = viewpoint_id_stack[cam_idx]
 
+            #通过高斯训练，拿到一个初步的渲染帧
             render_pkg = render(
                 viewpoint, self.gaussians, self.pipeline_params, self.background
             )
@@ -970,6 +971,8 @@ class Mapper(object):
                     depth = F.interpolate(
                         depth.unsqueeze(0), viewpoint.depth.shape, mode="bicubic"
                     ).squeeze(0)
+                    
+                #将初步拿到的渲染帧计算Mapping损失
                 current_uncertainty, loss_init = get_loss_mapping_uncertainty(
                     self.config["mapping"],
                     image,

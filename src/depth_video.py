@@ -348,9 +348,11 @@ class DepthVideo:
 
         self.mono_disps_mask_up[idx][(accurate_count<=1)&(inaccurate_count>0)&(self.mono_disps_up[idx]>0)] = False
 
+
     def ba(self, target, weight, eta, ii, jj, t0=1, t1=None, iters=2, lm=1e-4, ep=0.1,
            motion_only=False):
         if self.uncertainty_aware:
+            #不确定性越小（self.uncertainties_inv[ii] <=>1/uncertainty 值越大），对应的 weight 会被放大，模型会更关注这些区域 
             weight *= self.uncertainties_inv[ii][None, :, :, :, None]
 
         with self.get_lock():
